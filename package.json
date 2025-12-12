@@ -2,15 +2,16 @@
   "name": "helpdesk_t",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev",
+  "scripts": {  
+  "dev": "next dev",
+  "lint": "eslint",
+  "db:seed": "prisma db seed",
+  "postinstall": "prisma generate",
+  "build": "next build",
+  "start": "next start -p $PORT"
+},
 
-    "lint": "eslint",
-    "db:seed": "prisma db seed",
-    "postinstall": "prisma generate",
-    "build": "next build",
-    "start": "next start -p $PORT"
-  },
+  
   "prisma": {
     "seed": "node prisma/seed.cjs"
   },

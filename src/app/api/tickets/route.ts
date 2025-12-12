@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/options";
 import { sendTicketCreatedEmail } from "@/lib/email";
 
-const prisma = new PrismaClient();
+
 
 // Función helper: calcula SLA según prioridad
 function slaHoursByPriority(priority: string) {

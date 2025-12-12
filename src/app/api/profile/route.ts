@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/options";
 import bcrypt from "bcrypt";
 
-const prisma = new PrismaClient();
+
 
 // GET /api/profile -> datos del usuario logueado
 export async function GET() {

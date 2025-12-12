@@ -7,9 +7,7 @@ import bcrypt from "bcrypt";
 const prisma = new PrismaClient();
 
 export const authOptions: NextAuthOptions = {
-  session: {
-    strategy: "jwt",
-  },
+  session: { strategy: "jwt" },
 
   providers: [
     CredentialsProvider({
@@ -19,28 +17,24 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Contraseña", type: "password" },
       },
 
-      //@ts-ignore
-      async authorize(credentials) {
+      async authorize(credentials, _req) {
         if (!credentials?.email || !credentials.password) return null;
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
 
-        if (!user) return null;
+        if (!user || !user.isActive) return null;
 
-        const valid = await bcrypt.compare(
-          credentials.password,
-          user.passwordHash
-        );
+        const valid = await bcrypt.compare(credentials.password, user.passwordHash);
         if (!valid) return null;
 
         return {
           id: user.id,
           name: user.name,
           email: user.email,
-          role: user.role,
-          area: user.area,
+          role: user.role as any,
+          area: user.area ?? undefined, // IMPORTANTÍSIMO: no null
         };
       },
     }),
@@ -49,22 +43,20 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }: any) {
       if (user) {
+        token.id = user.id;
         token.role = user.role;
         token.area = user.area;
-        token.id = user.id;
       }
       return token;
     },
 
     async session({ session, token }: any) {
-      if (token) {
-        session.user = {
-          ...session.user,
-          role: token.role,
-          area: token.area,
-          id: token.id,
-        };
-      }
+      session.user = {
+        ...session.user,
+        id: token.id,
+        role: token.role,
+        area: token.area,
+      };
       return session;
     },
   },

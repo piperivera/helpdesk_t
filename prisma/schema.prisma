@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+enum Role {
+  requester
+  resolver
+  admin
+}
+
+enum Priority {
+  Baja
+  Media
+  Alta
+}
+
+enum TicketType {
+  Incidente
+  Solicitud
+  Cambio
+}
+
+enum Status {
+  Abierto
+  En_proceso
+  En_espera
+  Resuelto
+  Cerrado
+  Transferido
+  Transferido_para_cierre
+}
+
+model User {
+  id               String   @id @default(cuid())
+  name             String
+  email            String   @unique
+  passwordHash     String
+  role             Role
+  area             String?
+  isActive         Boolean  @default(true)   // 👈 MUY IMPORTANTE
+  createdAt        DateTime @default(now())
+  ticketsRequested Ticket[] @relation("RequestedTickets")
+  ticketsAssigned  Ticket[] @relation("AssignedTickets")
+}
+
+
+
+model Ticket {
+  id          String      @id @default(cuid())
+  number      String      @unique
+  title       String
+  description String
+  area        String
+  requester   User        @relation("RequestedTickets", fields: [requesterId], references: [id])
+  requesterId String
+  assignee    User?       @relation("AssignedTickets", fields: [assigneeId], references: [id])
+  assigneeId  String?
+  priority    Priority
+  type        TicketType
+  status      Status      @default(Abierto)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  dueAt       DateTime?
+  events      TicketEvent[]
+
+  attachments TicketAttachment[]
+}
+
+model TicketEvent {
+  id       String   @id @default(cuid())
+  ticket   Ticket   @relation(fields: [ticketId], references: [id])
+  ticketId String
+  at       DateTime @default(now())
+  description String? 
+  by       String?  // nombre o email de quien hizo la acción
+  action   String
+}
+
+model TicketAttachment {
+  id         String   @id @default(cuid())
+  ticket     Ticket   @relation(fields: [ticketId], references: [id])
+  ticketId   String
+
+  fileName   String
+  fileType   String
+  fileSize   Int
+  url        String           // /uploads/loquesea.ext
+  uploadedAt DateTime @default(now())
+}

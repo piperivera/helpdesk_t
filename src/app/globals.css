@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+/* Colores base */
+:root {
+  --background: #f4f5f7;
+  --foreground: #111827;
+}
+
+/* Utilidades personalizadas (sin usarlas en @apply) */
+@layer utilities {
+  .text-muted {
+    @apply text-slate-500;
+  }
+
+  .text-ink {
+    @apply text-slate-900;
+  }
+
+  .bg-primary {
+    @apply bg-[#113082];
+  }
+
+  .text-primary {
+    @apply text-[#113082];
+  }
+}
+
+/* Componentes reutilizables */
+@layer components {
+  .page-shell {
+    @apply min-h-screen bg-[#f4f5f7] text-slate-900;
+  }
+
+  .topbar {
+    @apply flex items-center justify-between px-6 py-3 border-b bg-white shadow-sm;
+  }
+
+  .topbar-right {
+    @apply flex items-center gap-2;
+  }
+
+  .page-main {
+    @apply max-w-6xl mx-auto px-4 py-6;
+  }
+
+  .card {
+    @apply bg-white border border-gray-200 rounded-2xl shadow-sm p-4;
+  }
+
+  .card-title {
+    @apply text-base sm:text-lg font-semibold text-slate-900;
+  }
+
+  .card-subtitle {
+    @apply text-xs sm:text-sm text-slate-500;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-full
+      bg-[#113082] text-white px-4 py-1.5 text-xs font-medium
+      hover:bg-[#0c235f] transition;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center rounded-full
+      px-3 py-1.5 border border-transparent text-slate-600
+      hover:bg-gray-100 hover:border-gray-200 transition;
+  }
+
+  .input {
+    @apply w-full border border-gray-200 rounded-xl px-3 py-2
+      bg-gray-50 text-sm text-slate-900
+      placeholder:text-gray-400
+      focus:bg-white focus:border-[#113082]
+      focus:ring-2 focus:ring-[#1130821a]
+      outline-none
+      transition;
+  }
+
+  .animate-fadeIn {
+    @apply motion-safe:animate-[fadeIn_0.18s_ease-out];
+  }
+}
+
+/* Body global (sin usar bg-surface en @apply) */
+body {
+  @apply bg-[#f4f5f7] text-slate-900;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}

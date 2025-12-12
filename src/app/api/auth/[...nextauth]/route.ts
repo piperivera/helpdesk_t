@@ -5,11 +5,8 @@ import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
-// 🔹 Configuración de NextAuth que usaremos en getServerSession()
 export const authOptions: NextAuthOptions = {
-  session: {
-    strategy: "jwt",
-  },
+  session: { strategy: "jwt" },
 
   providers: [
     CredentialsProvider({
@@ -19,14 +16,14 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Contraseña", type: "password" },
       },
 
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials.password) return null;
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
 
-        if (!user) return null;
+        if (!user || !user.isActive) return null;
 
         const valid = await bcrypt.compare(
           credentials.password,
@@ -38,8 +35,8 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           name: user.name,
           email: user.email,
-          role: user.role as any,
-          area: user.area,
+          role: user.role,
+          area: user.area ?? undefined, // ✅ clave para evitar string | null
         };
       },
     }),
@@ -50,26 +47,21 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
-        token.area = user.area;
+        token.area = user.area; // ya viene undefined si estaba null
       }
       return token;
     },
 
     async session({ session, token }: any) {
-      if (token) {
-        session.user = {
-          ...session.user,
-          id: token.id,
-          role: token.role,
-          area: token.area,
-        };
+      if (session.user) {
+        session.user.id = token.id;
+        session.user.role = token.role;
+        session.user.area = token.area;
       }
       return session;
     },
   },
 };
 
-// 🔹 Handler que usa NextAuth con esa config
 const handler = NextAuth(authOptions);
-
 export { handler as GET, handler as POST };

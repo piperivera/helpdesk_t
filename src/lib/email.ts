@@ -1,7 +1,7 @@
 // src/lib/email.ts
 import nodemailer from "nodemailer";
 
-const APP_URL = process.env.APP_URL || "http://localhost:3000";
+const APP_URL = process.env.APP_URL || "https://helpdesk-upk.vercel.app/";
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,

@@ -2,16 +2,14 @@
   "name": "helpdesk_t",
   "version": "0.1.0",
   "private": true,
-  "scripts": {  
-  "dev": "next dev",
-  "lint": "eslint",
-  "db:seed": "prisma db seed",
-  "postinstall": "prisma generate",
-  "build": "next build",
-  "start": "next start -p $PORT"
-},
-
-  
+  "scripts": {
+    "dev": "next dev",
+    "lint": "eslint",
+    "db:seed": "prisma db seed",
+    "postinstall": "prisma generate",
+    "build": "next build",
+    "start": "next start -p $PORT"
+  },
   "prisma": {
     "seed": "node prisma/seed.cjs"
   },
@@ -19,6 +17,7 @@
     "@prisma/client": "^6.19.0",
     "@supabase/supabase-js": "^2.87.1",
     "bcrypt": "^6.0.0",
+    "dotenv": "^17.2.3",
     "next": "16.0.10",
     "next-auth": "^4.24.13",
     "nodemailer": "^7.0.11",
@@ -43,8 +42,4 @@
     "ts-node": "^10.9.2",
     "typescript": "^5"
   }
-
-  
-
-
 }

@@ -43,6 +43,10 @@ function escapeHtml(str: string) {
  * - Mejor comportamiento en modo oscuro (forzar colores + bgcolor)
  * - Preheader (texto preview en bandeja)
  * - Escapado básico para campos de usuario
+ *
+ * CAMBIO CLAVE SOLICITADO:
+ * - El bloque "extraInfoHtml" ahora se renderiza dentro de un recuadro OSCURO
+ *   y con el TEXTO forzado a BLANCO para que en Gmail/Outlook (dark mode) NO se apague.
  */
 function buildBaseTicketEmailHTML(opts: BaseTemplateOptions): string {
   const {
@@ -78,7 +82,6 @@ function buildBaseTicketEmailHTML(opts: BaseTemplateOptions): string {
     `${headerLabel}: Ticket #${ticketNumber} – ${ticketTitle}`.slice(0, 140);
 
   // Colores “forzados” para legibilidad en dark-mode agresivo
-  // (Gmail/Outlook pueden reescribir estilos; esto suele mejorar bastante)
   const BG = BRAND_GRAY_BG;
   const CARD_BG = "#ffffff";
   const BORDER = "#d0d5e2";
@@ -86,6 +89,12 @@ function buildBaseTicketEmailHTML(opts: BaseTemplateOptions): string {
   const MUTED = "#4b5563";
   const SUBTLE = "#6b7280";
   const FOOT_BG = "#f3f4f6";
+
+  // Recuadro “asunto/detalle” oscuro + texto blanco (lo que pediste)
+  const NOTE_BG = "#0b1220";
+  const NOTE_BORDER = "#27324a";
+  const NOTE_TEXT = "#ffffff";
+  const NOTE_TEXT_MUTED = "#cbd5e1";
 
   return `
   <!doctype html>
@@ -153,13 +162,31 @@ function buildBaseTicketEmailHTML(opts: BaseTemplateOptions): string {
 
                   ${
                     extraInfoHtml
-                      ? `<div style="margin-top: 8px; font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: ${MUTED}; line-height: 1.5;">
-                           ${extraInfoHtml}
-                         </div>`
+                      ? `
+                      <!-- Recuadro OSCURO con TEXTO BLANCO (Asunto/Detalle) -->
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                        style="margin-top: 14px; border-radius: 12px; border: 1px solid ${NOTE_BORDER}; background:${NOTE_BG};"
+                        bgcolor="${NOTE_BG}">
+                        <tr>
+                          <td style="
+                            padding: 14px 14px;
+                            background:${NOTE_BG};
+                            color:${NOTE_TEXT};
+                            font-family: Arial, Helvetica, sans-serif;
+                            font-size: 13px;
+                            line-height: 1.6;
+                          " bgcolor="${NOTE_BG}">
+                            <div style="color:${NOTE_TEXT};">
+                              ${extraInfoHtml}
+                            </div>
+                          </td>
+                        </tr>
+                      </table>
+                      `
                       : ""
                   }
 
-                  <!-- Detalle del ticket (fondo blanco + texto forzado para evitar “apagado” en dark-mode) -->
+                  <!-- Detalle del ticket (fondo blanco + texto forzado) -->
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
                     style="margin-top: 20px; border-radius: 10px; border: 1px solid #e0e7ff; background:#ffffff;"
                     bgcolor="#ffffff">
@@ -254,8 +281,9 @@ export function buildTicketCreatedEmail(opts: TicketEmailCommon) {
       Nuestro equipo revisará tu caso y se pondrá en contacto contigo en el menor tiempo posible.
     `,
     extraInfoHtml: `
-      Puedes hacer seguimiento al estado del ticket desde el portal. Si necesitas aportar más información,
-      responde a este correo o agrega comentarios directamente en el ticket.
+      <div style="color:#ffffff;"><strong style="color:#ffffff;">Asunto:</strong> ${escapeHtml(ticketTitle)}</div>
+      <div style="height:6px; line-height:6px;">&nbsp;</div>
+      <div style="color:#ffffff;"><strong style="color:#ffffff;">Detalle:</strong> Ticket creado correctamente.</div>
     `,
   });
 
@@ -274,7 +302,7 @@ export function buildTicketUpdatedEmail(
   const subject = `Actualización del ticket (#${ticketNumber}) – ${ticketTitle}`;
 
   const commentHtml = comment
-    ? `<strong>Comentario del gestor:</strong><br />${escapeHtml(comment).replace(/\n/g, "<br />")}`
+    ? escapeHtml(comment).replace(/\n/g, "<br />")
     : "El ticket ha sido actualizado en el sistema.";
 
   const html = buildBaseTicketEmailHTML({
@@ -285,7 +313,13 @@ export function buildTicketUpdatedEmail(
     introHtml: `
       Tu ticket <strong>#${escapeHtml(ticketNumber)}</strong> ha sido actualizado por <strong>${escapeHtml(updatedBy)}</strong>.
     `,
-    extraInfoHtml: commentHtml,
+    extraInfoHtml: `
+      <div style="color:#ffffff;"><strong style="color:#ffffff;">Asunto:</strong> ${escapeHtml(ticketTitle)}</div>
+      <div style="height:6px; line-height:6px;">&nbsp;</div>
+      <div style="color:#ffffff;"><strong style="color:#ffffff;">Detalle de la actualización:</strong><br />${commentHtml}</div>
+      <div style="height:6px; line-height:6px;">&nbsp;</div>
+      <div style="color:#ffffff;"><strong style="color:#ffffff;">Cambio de estado a:</strong> ${escapeHtml(newStatusLabel)}</div>
+    `,
   });
 
   return { subject, html };
@@ -303,7 +337,7 @@ export function buildTicketResolvedEmail(
   const subject = `Ticket resuelto (#${ticketNumber}) – ${ticketTitle}`;
 
   const noteHtml = resolutionNote
-    ? `<strong>Detalle de la resolución:</strong><br />${escapeHtml(resolutionNote).replace(/\n/g, "<br />")}`
+    ? escapeHtml(resolutionNote).replace(/\n/g, "<br />")
     : "El ticket ha sido marcado como resuelto por el equipo de soporte.";
 
   const html = buildBaseTicketEmailHTML({
@@ -315,10 +349,9 @@ export function buildTicketResolvedEmail(
       El ticket <strong>#${escapeHtml(ticketNumber)}</strong> ha sido marcado como <strong>Resuelto</strong> por <strong>${escapeHtml(resolvedBy)}</strong>.
     `,
     extraInfoHtml: `
-      ${noteHtml}
-      <br /><br />
-      Si consideras que el incidente no ha quedado completamente resuelto, puedes responder a este correo
-      o reabrir el ticket desde el portal.
+      <div style="color:#ffffff;"><strong style="color:#ffffff;">Asunto:</strong> ${escapeHtml(ticketTitle)}</div>
+      <div style="height:6px; line-height:6px;">&nbsp;</div>
+      <div style="color:#ffffff;"><strong style="color:#ffffff;">Detalle de la resolución:</strong><br />${noteHtml}</div>
     `,
   });
 
@@ -350,8 +383,11 @@ export function buildTicketSlaWarningEmail(
       }
     `,
     extraInfoHtml: `
-      <strong>Responsable actual:</strong> ${escapeHtml(assigneeName || "Sin asignar")}<br />
-      Te recomendamos revisar la información del ticket y priorizar su atención para evitar incumplimientos de SLA.
+      <div style="color:#ffffff;"><strong style="color:#ffffff;">Asunto:</strong> ${escapeHtml(ticketTitle)}</div>
+      <div style="height:6px; line-height:6px;">&nbsp;</div>
+      <div style="color:#ffffff;"><strong style="color:#ffffff;">Responsable actual:</strong> ${escapeHtml(assigneeName || "Sin asignar")}</div>
+      <div style="height:6px; line-height:6px;">&nbsp;</div>
+      <div style="color:#ffffff;"><strong style="color:#ffffff;">Detalle:</strong> Revisa el ticket para evitar incumplimientos de SLA.</div>
     `,
     highlightColor: "#b91c1c", // rojo para alerta
   });

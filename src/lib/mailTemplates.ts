@@ -1,7 +1,8 @@
 // src/lib/mailTemplates.ts
 
 const BRAND_BLUE = "#00207a"; // azul UPK aproximado
-const BRAND_GRAY_BG = "#f4f5fb";
+const BRAND_GRAY_BG = "#ffffff";
+
 
 // Ajusta si usas otra env var
 const APP_URL =
@@ -82,13 +83,14 @@ function buildBaseTicketEmailHTML(opts: BaseTemplateOptions): string {
     `${headerLabel}: Ticket #${ticketNumber} – ${ticketTitle}`.slice(0, 140);
 
   // Colores “forzados” para legibilidad en dark-mode agresivo
-  const BG = BRAND_GRAY_BG;
+  const BG = "#ffffff";
   const CARD_BG = "#ffffff";
-  const BORDER = "#d0d5e2";
+  const BORDER = "#ffffff";
   const TEXT = "#111827";
-  const MUTED = "#4b5563";
-  const SUBTLE = "#6b7280";
-  const FOOT_BG = "#f3f4f6";
+  const MUTED = "#ffffff";
+  const SUBTLE = "#ffffff";
+  const FOOT_BG = "#ffffff";
+
 
   // Recuadro “asunto/detalle” oscuro + texto blanco (lo que pediste)
   const NOTE_BG = "#0b1220";

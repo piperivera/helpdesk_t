@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, FormEvent } from "react";
+import { useState, useEffect, FormEvent, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 type Priority = "Baja" | "Media" | "Alta";
 type TicketType = "Incidente" | "Solicitud" | "Cambio";
@@ -20,19 +21,18 @@ export default function CreateTicketPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // adjuntos
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
-    }
+    if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-[#f4f5f7]">
         <p className="text-sm text-muted">Cargando sesión...</p>
       </div>
     );
@@ -53,17 +53,10 @@ export default function CreateTicketPage() {
     try {
       setSaving(true);
 
-      // 1) Crear ticket
       const res = await fetch("/api/tickets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          description,
-          area,
-          priority,
-          type,
-        }),
+        body: JSON.stringify({ title, description, area, priority, type }),
       });
 
       if (!res.ok) {
@@ -71,9 +64,8 @@ export default function CreateTicketPage() {
         throw new Error(d.error || "Error al crear ticket");
       }
 
-      const created = await res.json(); // created.id
+      const created = await res.json();
 
-      // 2) Si hay archivo seleccionado, subirlo
       if (selectedFile) {
         const fd = new FormData();
         fd.append("file", selectedFile);
@@ -88,14 +80,10 @@ export default function CreateTicketPage() {
 
         if (!uploadRes.ok) {
           const d = await uploadRes.json().catch(() => ({}));
-          // No frenamos la creación, solo mostramos aviso
-          setUploadError(
-            d.error || "El ticket se creó, pero el archivo falló."
-          );
+          setUploadError(d.error || "El ticket se creó, pero el archivo falló.");
         }
       }
 
-      // 3) Redirigir al detalle del ticket
       router.push(`/tickets/${created.id}`);
     } catch (err: any) {
       setErrorMsg(err.message ?? "Error inesperado al crear el ticket");
@@ -106,35 +94,39 @@ export default function CreateTicketPage() {
 
   return (
     <div className="page-shell">
-      {/* Topbar */}
       <header className="topbar">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button
+            onClick={() => router.push("/")}
+            className="h-9 w-9 flex items-center justify-center"
             type="button"
-            onClick={() => router.back()}
-            className="btn-ghost text-xs"
+            aria-label="Ir al dashboard"
           >
-            ← Volver
+            <Image
+              src="/upk-logo.png"
+              alt="UPK Helpdesk"
+              width={36}
+              height={36}
+              className="object-contain"
+              priority
+            />
           </button>
-          <div className="hidden sm:flex items-center gap-2">
-            <div className="h-7 w-7 rounded-xl bg-primary/10 flex items-center justify-center text-primary text-[11px] font-semibold">
-              UPK
-            </div>
-            <div>
-              <p className="text-[11px] text-muted">Nuevo ticket</p>
-              <p className="text-xs font-medium text-ink">
-                Crear solicitud al área TI
-              </p>
-            </div>
+
+          <div>
+            <p className="text-[11px] text-muted">Nuevo ticket</p>
+            <p className="text-xs font-medium text-ink">
+              Crear solicitud al área TI
+            </p>
           </div>
         </div>
-        <div className="topbar-right">
+
+        <div className="topbar-right gap-2">
           <button
+            onClick={() => router.back()}
+            className="btn-ghost btn-sm"
             type="button"
-            onClick={() => router.push("/")}
-            className="btn-ghost text-xs"
           >
-            Ir al dashboard
+            Volver
           </button>
         </div>
       </header>
@@ -159,7 +151,6 @@ export default function CreateTicketPage() {
               </div>
             )}
 
-            {/* Título */}
             <div>
               <label className="block text-xs font-medium text-muted mb-1.5">
                 Título
@@ -172,7 +163,6 @@ export default function CreateTicketPage() {
               />
             </div>
 
-            {/* Descripción */}
             <div>
               <label className="block text-xs font-medium text-muted mb-1.5">
                 Descripción
@@ -182,11 +172,10 @@ export default function CreateTicketPage() {
                 onChange={(e) => setDescription(e.target.value)}
                 rows={5}
                 className="input min-h-[120px] resize-none"
-                placeholder="Describe el problema con el mayor detalle posible: cuándo empezó, qué has intentado, mensajes de error, etc."
+                placeholder="Describe el problema con el mayor detalle posible..."
               />
             </div>
 
-            {/* Área / Prioridad / Tipo */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-medium text-muted mb-1.5">
@@ -196,7 +185,7 @@ export default function CreateTicketPage() {
                   value={area}
                   onChange={(e) => setArea(e.target.value)}
                   className="input"
-                  placeholder="Ej: TI, Logística, Operaciones..."
+                  placeholder="Ej: TI, Logística..."
                 />
               </div>
 
@@ -231,33 +220,63 @@ export default function CreateTicketPage() {
               </div>
             </div>
 
-            {/* Adjuntar archivo en la creación */}
+            {/* Adjuntar archivo (UI visible) */}
             <div className="border-t border-gray-100 pt-4 mt-2 space-y-3">
               <div>
                 <h3 className="text-sm font-semibold text-ink">
                   Adjuntar archivos (opcional)
                 </h3>
                 <p className="card-subtitle mt-1">
-                  Puedes adjuntar capturas de pantalla, reportes o documentos
-                  relacionados. Esto ayuda a resolver más rápido tu solicitud.
+                  Adjunta capturas o documentos para acelerar la solución.
                 </p>
               </div>
 
+              {/* input real oculto */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  setSelectedFile(file);
+                  setUploadError(null);
+                }}
+              />
+
               <div className="flex flex-col md:flex-row gap-3 md:items-center">
-                <input
-                  type="file"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0] || null;
-                    setSelectedFile(file);
-                    setUploadError(null);
-                  }}
-                  className="text-xs"
-                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="btn-outline btn-sm"
+                >
+                  Seleccionar archivo
+                </button>
+
+                <div className="text-[11px] text-ink/80">
+                  {selectedFile ? (
+                    <>
+                      <span className="font-semibold">Seleccionado:</span>{" "}
+                      {selectedFile.name} ·{" "}
+                      {Math.round(selectedFile.size / 1024)} KB
+                    </>
+                  ) : (
+                    <span className="text-muted">
+                      Ningún archivo seleccionado
+                    </span>
+                  )}
+                </div>
+
                 {selectedFile && (
-                  <span className="text-[11px] text-ink/80">
-                    {selectedFile.name} ·{" "}
-                    {Math.round(selectedFile.size / 1024)} KB
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedFile(null);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                    className="btn-ghost btn-sm"
+                  >
+                    Quitar
+                  </button>
                 )}
               </div>
 
@@ -266,19 +285,18 @@ export default function CreateTicketPage() {
               )}
             </div>
 
-            {/* Acciones */}
             <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => router.back()}
-                className="btn-ghost text-xs"
+                className="btn-ghost btn-sm"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                className="btn-primary text-xs disabled:opacity-60 disabled:cursor-not-allowed"
+                className="btn-primary btn-sm disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {saving ? "Creando..." : "Crear ticket"}
               </button>

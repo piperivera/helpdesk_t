@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 export default function HomePage() {
   const { data: session, status } = useSession();
@@ -26,10 +27,7 @@ export default function HomePage() {
     );
   }
 
-  if (!session?.user) {
-    // mientras redirige
-    return null;
-  }
+  if (!session?.user) return null;
 
   const role = session.user.role;
   const name = session.user.name;
@@ -37,19 +35,30 @@ export default function HomePage() {
 
   return (
     <div className="page-shell">
-      {/* Topbar */}
       <header className="topbar">
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-[10px] font-semibold text-white shadow-soft">
-            UPK
-          </div>
+          {/* LOGO UPK */}
+          <button
+            onClick={() => router.push("/")}
+            className="h-9 w-9 flex items-center justify-center"
+            type="button"
+            aria-label="Ir al inicio"
+          >
+            <Image
+              src="/upk-logo.png"
+              alt="UPK Helpdesk"
+              width={36}
+              height={36}
+              className="object-contain"
+              priority
+            />
+          </button>
+
           <div>
             <h1 className="text-sm md:text-base font-semibold text-ink">
               UPK Helpdesk
             </h1>
-            <p className="text-[11px] text-muted">
-              Inicio
-            </p>
+            <p className="text-[11px] text-muted">Inicio</p>
           </div>
         </div>
 
@@ -64,23 +73,23 @@ export default function HomePage() {
 
           <button
             onClick={() => router.push("/profile")}
-            className="btn-secondary"
+            className="btn-outline btn-sm"
+            type="button"
           >
             Mi perfil
           </button>
 
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="btn-ghost"
+            className="btn-ghost btn-sm btn-danger-hover"
+            type="button"
           >
             Cerrar sesión
           </button>
         </div>
       </header>
 
-      {/* Contenido principal */}
       <main className="page-main space-y-4">
-        {/* Mensaje según rol */}
         <section className="card">
           <h2 className="card-title">Bienvenido/a, {name}</h2>
           <p className="card-subtitle">
@@ -90,7 +99,6 @@ export default function HomePage() {
           </p>
         </section>
 
-        {/* Acciones solicitante */}
         {role === "requester" && (
           <section className="card">
             <h3 className="section-title">Acciones de solicitante</h3>
@@ -102,12 +110,14 @@ export default function HomePage() {
               <button
                 onClick={() => router.push("/tickets/create")}
                 className="btn-primary"
+                type="button"
               >
                 Crear ticket
               </button>
               <button
                 onClick={() => router.push("/tickets/mine")}
-                className="btn-secondary"
+                className="btn-outline"
+                type="button"
               >
                 Ver mis tickets
               </button>
@@ -115,7 +125,6 @@ export default function HomePage() {
           </section>
         )}
 
-        {/* Acciones resolutor */}
         {(role === "resolver" || role === "admin") && (
           <section className="card">
             <h3 className="section-title">Acciones de resolutor</h3>
@@ -127,6 +136,7 @@ export default function HomePage() {
               <button
                 onClick={() => router.push("/tickets/resolver")}
                 className="btn-primary"
+                type="button"
               >
                 Bandeja de tickets
               </button>
@@ -134,7 +144,6 @@ export default function HomePage() {
           </section>
         )}
 
-        {/* Vista admin */}
         {role === "admin" && (
           <section className="card">
             <h3 className="section-title">Vista de administrador</h3>
@@ -146,18 +155,21 @@ export default function HomePage() {
               <button
                 onClick={() => router.push("/admin/tickets")}
                 className="btn-primary"
+                type="button"
               >
                 Ver todos los tickets
               </button>
               <button
                 onClick={() => router.push("/admin/metrics")}
-                className="btn-success"
+                className="btn-outline"
+                type="button"
               >
                 Ver métricas
               </button>
               <button
                 onClick={() => router.push("/admin/users")}
-                className="btn-warning"
+                className="btn-secondary"
+                type="button"
               >
                 Gestionar usuarios
               </button>

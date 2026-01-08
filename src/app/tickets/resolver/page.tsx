@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 type Ticket = {
   id: string;
@@ -35,13 +36,26 @@ function hoursLeft(dueAt: string | null) {
   return Math.ceil(ms / (1000 * 60 * 60));
 }
 
-const STATUS_OPTIONS = [
-  "Abierto",
-  "En_proceso",
-  "En_espera",
-  "Resuelto",
-  "Cerrado",
-];
+const STATUS_OPTIONS = ["Abierto", "En_proceso", "En_espera", "Resuelto", "Cerrado"];
+
+function statusLabel(s: string) {
+  return s.replaceAll("_", " ");
+}
+
+function statusChipClass(s: string) {
+  if (s === "Abierto") return "chip-blue";
+  if (s === "En_proceso") return "chip-amber";
+  if (s === "En_espera") return "chip-muted";
+  if (s === "Resuelto") return "chip-emerald";
+  if (s === "Cerrado") return "chip-muted";
+  return "chip-muted";
+}
+
+function priorityChipClass(p: Ticket["priority"]) {
+  if (p === "Alta") return "chip-red";
+  if (p === "Media") return "chip-amber";
+  return "chip-muted";
+}
 
 export default function ResolverInboxPage() {
   const { data: session, status } = useSession();
@@ -51,15 +65,16 @@ export default function ResolverInboxPage() {
   const [resolvers, setResolvers] = useState<ResolverUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   const [statusFilter, setStatusFilter] = useState<string>("Todos");
 
-  // comentario por fila: { [ticketId]: "texto..." }
+  // comentario por fila
   const [rowComments, setRowComments] = useState<Record<string, string>>({});
+  // estado seleccionado por fila
+  const [rowNextStatus, setRowNextStatus] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
-    }
+    if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
   useEffect(() => {
@@ -84,6 +99,10 @@ export default function ResolverInboxPage() {
 
         setTickets(tData);
         setResolvers(rData);
+
+        const init: Record<string, string> = {};
+        for (const t of tData) init[t.id] = t.status;
+        setRowNextStatus(init);
       } catch (err: any) {
         setErrorMsg(err.message ?? "Error inesperado al cargar bandeja");
       } finally {
@@ -91,14 +110,8 @@ export default function ResolverInboxPage() {
       }
     }
 
-    if (status === "authenticated") {
-      load();
-    }
+    if (status === "authenticated") load();
   }, [status]);
-
-  function handleCommentChange(ticketId: string, value: string) {
-    setRowComments((prev) => ({ ...prev, [ticketId]: value }));
-  }
 
   async function updateTicket(id: string, payload: any) {
     try {
@@ -115,33 +128,40 @@ export default function ResolverInboxPage() {
 
       const updated: Ticket = await res.json();
       setTickets((prev) => prev.map((t) => (t.id === id ? updated : t)));
+      setRowNextStatus((prev) => ({ ...prev, [id]: updated.status }));
     } catch (err: any) {
       alert(err.message);
     }
   }
 
-  async function handleChangeStatus(t: Ticket, newStatus: string) {
-    const comment = rowComments[t.id] || "";
+  async function handleApplyStatus(t: Ticket) {
+    const newStatus = rowNextStatus[t.id] ?? t.status;
+    const comment = (rowComments[t.id] || "").trim();
+
     await updateTicket(t.id, {
       status: newStatus,
-      comment: comment || `Cambio de estado a ${newStatus.replace("_", " ")}`,
+      comment: comment || `Cambio de estado a ${statusLabel(newStatus)}`,
     });
+
     setRowComments((prev) => ({ ...prev, [t.id]: "" }));
   }
 
   async function handleRelease(t: Ticket) {
     const comment =
-      rowComments[t.id] || "Ticket liberado y devuelto a la cola general.";
+      (rowComments[t.id] || "").trim() ||
+      "Ticket liberado y devuelto a la cola general.";
+
     await updateTicket(t.id, {
       assigneeId: null,
       comment,
     });
+
     setRowComments((prev) => ({ ...prev, [t.id]: "" }));
   }
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface">
+      <div className="min-h-screen flex items-center justify-center bg-[#f4f5f7]">
         <p className="text-sm text-muted">Cargando sesión...</p>
       </div>
     );
@@ -149,25 +169,34 @@ export default function ResolverInboxPage() {
 
   if (!session?.user) return null;
 
-  const filteredTickets =
-    statusFilter === "Todos"
+  const isAdmin = session.user.role === "admin";
+
+  const filteredTickets = useMemo(() => {
+    return statusFilter === "Todos"
       ? tickets
       : tickets.filter((t) => t.status === statusFilter);
-
-  const isAdmin = session.user.role === "admin";
+  }, [tickets, statusFilter]);
 
   return (
     <div className="page-shell">
-      {/* Topbar */}
       <header className="topbar">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button
+            onClick={() => router.push("/")}
+            className="h-9 w-9 flex items-center justify-center"
             type="button"
-            onClick={() => router.back()}
-            className="btn-ghost text-xs"
+            aria-label="Ir al dashboard"
           >
-            ← Volver
+            <Image
+              src="/upk-logo.png"
+              alt="UPK Helpdesk"
+              width={36}
+              height={36}
+              className="object-contain"
+              priority
+            />
           </button>
+
           <div>
             <p className="text-[11px] text-muted">Bandeja de tickets</p>
             <p className="text-xs font-medium text-ink">
@@ -176,24 +205,21 @@ export default function ResolverInboxPage() {
           </div>
         </div>
 
-        <div className="topbar-right gap-3">
+        <div className="topbar-right gap-2">
           <select
-            className="text-xs border rounded-full px-3 py-1 bg-white text-ink/80"
+            className="select"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
             {["Todos", ...STATUS_OPTIONS].map((s) => (
               <option key={s} value={s}>
-                {s.replace("_", " ")}
+                {statusLabel(s)}
               </option>
             ))}
           </select>
-          <button
-            onClick={() => router.push("/")}
-            className="btn-ghost text-xs"
-            type="button"
-          >
-            Ir al dashboard
+
+          <button onClick={() => router.back()} className="btn-ghost btn-sm" type="button">
+            Volver
           </button>
         </div>
       </header>
@@ -222,91 +248,90 @@ export default function ResolverInboxPage() {
               <div className="px-4 pt-4 pb-2">
                 <h2 className="card-title mb-1">Bandeja de resolutor</h2>
                 <p className="card-subtitle">
-                  Cambia estado, asigna tickets y deja comentarios rápidos por
-                  fila.
+                  Cambia estado, asigna tickets y deja comentarios rápidos por fila.
                 </p>
               </div>
 
               <div className="overflow-x-auto border-t border-gray-100">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-gray-50 text-[11px] uppercase text-muted">
+                <table className="table">
+                  <thead>
                     <tr>
-                      <th className="px-3 py-2 text-left"># Ticket</th>
-                      <th className="px-3 py-2 text-left">Título</th>
-                      <th className="px-3 py-2 text-left">Área</th>
-                      <th className="px-3 py-2 text-left">Prioridad</th>
-                      <th className="px-3 py-2 text-left">Estado</th>
-                      <th className="px-3 py-2 text-left">Asignado a</th>
-                      <th className="px-3 py-2 text-left">Creado</th>
-                      <th className="px-3 py-2 text-left">SLA</th>
-                      <th className="px-3 py-2 text-left">Acciones</th>
+                      <th># Ticket</th>
+                      <th>Título</th>
+                      <th>Área</th>
+                      <th>Prioridad</th>
+                      <th>Estado</th>
+                      <th>Asignación</th>
+                      <th>Creado</th>
+                      <th>SLA</th>
+                      <th className="min-w-[340px]">Acciones</th>
                     </tr>
                   </thead>
+
                   <tbody>
                     {filteredTickets.map((t) => {
                       const hrs = hoursLeft(t.dueAt);
-                      let slaText = "-";
-                      let slaClass = "";
 
+                      let slaText = "-";
+                      let slaChip = "chip-muted";
                       if (hrs !== null) {
                         if (hrs < 0) {
-                          slaText = `Vencido hace ${Math.abs(hrs)}h`;
-                          slaClass = "text-red-600";
+                          slaText = `Vencido ${Math.abs(hrs)}h`;
+                          slaChip = "chip-red";
                         } else if (hrs <= 4) {
-                          slaText = `${hrs}h restantes`;
-                          slaClass = "text-amber-600";
+                          slaText = `${hrs}h`;
+                          slaChip = "chip-amber";
                         } else {
-                          slaText = `${hrs}h restantes`;
-                          slaClass = "text-emerald-600";
+                          slaText = `${hrs}h`;
+                          slaChip = "chip-emerald";
                         }
                       }
 
                       const commentValue = rowComments[t.id] || "";
+                      const nextStatus = rowNextStatus[t.id] ?? t.status;
 
                       return (
-                        <tr
-                          key={t.id}
-                          className="border-t border-gray-100 hover:bg-gray-50 align-top transition-colors"
-                        >
-                          <td className="px-3 py-2 font-medium text-primary">
+                        <tr key={t.id} className="transition-colors">
+                          <td className="font-semibold text-primary">
                             <button
-                              className="hover:underline text-xs"
+                              className="hover:underline"
                               onClick={() => router.push(`/tickets/${t.id}`)}
+                              type="button"
                             >
                               {t.number}
                             </button>
                           </td>
-                          <td className="px-3 py-2 text-ink truncate max-w-xs">
-                            {t.title}
+
+                          <td className="text-ink truncate max-w-xs">{t.title}</td>
+
+                          <td className="text-ink/80">{t.area}</td>
+
+                          <td>
+                            <span className={priorityChipClass(t.priority)}>{t.priority}</span>
                           </td>
-                          <td className="px-3 py-2 text-ink/80">{t.area}</td>
-                          <td className="px-3 py-2 text-ink/80">
-                            {t.priority}
+
+                          <td>
+                            <span className={statusChipClass(t.status)}>
+                              {statusLabel(t.status)}
+                            </span>
                           </td>
-                          <td className="px-3 py-2 text-ink/80">
-                            {t.status.replace("_", " ")}
-                          </td>
-                          <td className="px-3 py-2">
+
+                          <td>
                             {isAdmin ? (
                               <select
-                                className="text-xs border rounded-full px-2 py-1 bg-white text-ink/80"
+                                className="select"
                                 value={t.assigneeId || ""}
                                 onChange={(e) =>
                                   updateTicket(t.id, {
-                                    assigneeId:
-                                      e.target.value === ""
-                                        ? null
-                                        : e.target.value,
-                                    comment:
-                                      "Cambio de asignación desde bandeja",
+                                    assigneeId: e.target.value === "" ? null : e.target.value,
+                                    comment: "Cambio de asignación desde bandeja",
                                   })
                                 }
                               >
                                 <option value="">Sin asignar</option>
                                 {resolvers.map((r) => (
                                   <option key={r.id} value={r.id}>
-                                    {r.name}{" "}
-                                    {r.role === "admin" ? "(Admin)" : ""}
+                                    {r.name} {r.role === "admin" ? "(Admin)" : ""}
                                   </option>
                                 ))}
                               </select>
@@ -314,52 +339,70 @@ export default function ResolverInboxPage() {
                               <button
                                 type="button"
                                 onClick={() => handleRelease(t)}
-                                className="text-xs px-3 py-1 rounded-full border border-gray-200 bg-white hover:bg-gray-50"
+                                className="btn-outline btn-sm"
                               >
                                 Liberar
                               </button>
                             ) : t.assigneeId ? (
-                              <span className="text-[11px] text-ink/70">
-                                Asignado
-                              </span>
+                              <span className="text-[11px] text-slate-600">Asignado</span>
                             ) : (
-                              <span className="text-[11px] text-muted">
-                                Sin asignar
-                              </span>
+                              <span className="text-[11px] text-muted">Sin asignar</span>
                             )}
                           </td>
-                          <td className="px-3 py-2 text-ink/70">
-                            {formatDate(t.createdAt)}
+
+                          <td className="text-ink/70">{formatDate(t.createdAt)}</td>
+
+                          <td>
+                            <span className={slaChip}>{slaText}</span>
                           </td>
-                          <td className={`px-3 py-2 text-[11px] ${slaClass}`}>
-                            {slaText}
-                          </td>
-                          <td className="px-3 py-2 min-w-[240px]">
-                            <div className="flex flex-wrap gap-1 mb-2">
-                              {STATUS_OPTIONS.map((s) => (
-                                <button
-                                  key={s}
-                                  type="button"
-                                  onClick={() => handleChangeStatus(t, s)}
-                                  className={`text-[11px] border rounded-full px-3 py-1 ${
-                                    t.status === s
-                                      ? "bg-blue-50 border-blue-500 text-blue-700"
-                                      : "bg-white border-gray-200 text-ink/80 hover:bg-gray-50"
-                                  }`}
+
+                          <td>
+                            <div className="flex flex-col gap-2">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <select
+                                  className="select"
+                                  value={nextStatus}
+                                  onChange={(e) =>
+                                    setRowNextStatus((prev) => ({
+                                      ...prev,
+                                      [t.id]: e.target.value,
+                                    }))
+                                  }
                                 >
-                                  {s.replace("_", " ")}
+                                  {STATUS_OPTIONS.map((s) => (
+                                    <option key={s} value={s}>
+                                      {statusLabel(s)}
+                                    </option>
+                                  ))}
+                                </select>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleApplyStatus(t)}
+                                  className="btn-primary btn-sm"
+                                >
+                                  Aplicar
                                 </button>
-                              ))}
+
+                                <button
+                                  type="button"
+                                  onClick={() => router.push(`/tickets/${t.id}`)}
+                                  className="btn-ghost btn-sm"
+                                >
+                                  Ver
+                                </button>
+                              </div>
+
+                              <input
+                                type="text"
+                                placeholder="Comentario opcional para esta acción..."
+                                value={commentValue}
+                                onChange={(e) =>
+                                  setRowComments((prev) => ({ ...prev, [t.id]: e.target.value }))
+                                }
+                                className="input !h-8 !rounded-xl !px-3 !py-0 text-xs"
+                              />
                             </div>
-                            <input
-                              type="text"
-                              placeholder="Comentario opcional para esta acción..."
-                              value={commentValue}
-                              onChange={(e) =>
-                                handleCommentChange(t.id, e.target.value)
-                              }
-                              className="w-full border rounded-full px-3 py-1 text-xs text-ink placeholder:text-muted bg-gray-50 focus:bg-white"
-                            />
                           </td>
                         </tr>
                       );

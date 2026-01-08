@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 type Ticket = {
   id: string;
@@ -28,17 +29,20 @@ function hoursLeft(dueAt: string | null) {
   return Math.ceil(ms / (1000 * 60 * 60));
 }
 
+function statusLabel(s: string) {
+  return s.replaceAll("_", " ");
+}
+
 export default function MyTicketsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
-    }
+    if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
   useEffect(() => {
@@ -58,14 +62,12 @@ export default function MyTicketsPage() {
       }
     }
 
-    if (status === "authenticated") {
-      load();
-    }
+    if (status === "authenticated") load();
   }, [status]);
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface">
+      <div className="min-h-screen flex items-center justify-center bg-[#f4f5f7]">
         <p className="text-sm text-muted">Cargando sesión...</p>
       </div>
     );
@@ -73,18 +75,28 @@ export default function MyTicketsPage() {
 
   if (!session?.user) return null;
 
+  const rows = useMemo(() => tickets, [tickets]);
+
   return (
     <div className="page-shell">
-      {/* Topbar */}
       <header className="topbar">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button
+            onClick={() => router.push("/")}
+            className="h-9 w-9 flex items-center justify-center"
             type="button"
-            onClick={() => router.back()}
-            className="btn-ghost text-xs"
+            aria-label="Ir al dashboard"
           >
-            ← Volver
+            <Image
+              src="/upk-logo.png"
+              alt="UPK Helpdesk"
+              width={36}
+              height={36}
+              className="object-contain"
+              priority
+            />
           </button>
+
           <div>
             <p className="text-[11px] text-muted">Mis tickets</p>
             <p className="text-xs font-medium text-ink">
@@ -96,17 +108,13 @@ export default function MyTicketsPage() {
         <div className="topbar-right gap-2">
           <button
             onClick={() => router.push("/tickets/create")}
-            className="btn-primary text-xs"
+            className="btn-primary btn-sm"
             type="button"
           >
-            + Nuevo ticket
+            Nuevo ticket
           </button>
-          <button
-            onClick={() => router.push("/")}
-            className="btn-ghost text-xs"
-            type="button"
-          >
-            Ir al dashboard
+          <button onClick={() => router.back()} className="btn-ghost btn-sm" type="button">
+            Volver
           </button>
         </div>
       </header>
@@ -123,7 +131,7 @@ export default function MyTicketsPage() {
             <div className="card">
               <p className="text-sm text-muted">Cargando tickets...</p>
             </div>
-          ) : tickets.length === 0 ? (
+          ) : rows.length === 0 ? (
             <div className="card">
               <h2 className="card-title mb-1">Aún no tienes tickets</h2>
               <p className="card-subtitle">
@@ -135,71 +143,63 @@ export default function MyTicketsPage() {
               <div className="px-4 pt-4 pb-2">
                 <h2 className="card-title mb-1">Mis tickets</h2>
                 <p className="card-subtitle">
-                  Haz clic en el número de ticket para ver el detalle y su
-                  historial.
+                  Haz clic en el número de ticket para ver el detalle y su historial.
                 </p>
               </div>
 
               <div className="overflow-x-auto border-t border-gray-100">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-gray-50 text-[11px] uppercase text-muted">
+                <table className="table">
+                  <thead>
                     <tr>
-                      <th className="px-3 py-2 text-left"># Ticket</th>
-                      <th className="px-3 py-2 text-left">Título</th>
-                      <th className="px-3 py-2 text-left">Área</th>
-                      <th className="px-3 py-2 text-left">Prioridad</th>
-                      <th className="px-3 py-2 text-left">Tipo</th>
-                      <th className="px-3 py-2 text-left">Estado</th>
-                      <th className="px-3 py-2 text-left">Creado</th>
-                      <th className="px-3 py-2 text-left">SLA</th>
+                      <th># Ticket</th>
+                      <th>Título</th>
+                      <th>Área</th>
+                      <th>Prioridad</th>
+                      <th>Tipo</th>
+                      <th>Estado</th>
+                      <th>Creado</th>
+                      <th>SLA</th>
                     </tr>
                   </thead>
+
                   <tbody>
-                    {tickets.map((t) => {
+                    {rows.map((t) => {
                       const hrs = hoursLeft(t.dueAt);
                       let slaText = "-";
-                      let slaClass = "";
+                      let slaChip = "chip-muted";
 
                       if (hrs !== null) {
                         if (hrs < 0) {
-                          slaText = `Vencido hace ${Math.abs(hrs)}h`;
-                          slaClass = "text-red-600";
+                          slaText = `Vencido ${Math.abs(hrs)}h`;
+                          slaChip = "chip-red";
                         } else if (hrs <= 4) {
-                          slaText = `${hrs}h restantes`;
-                          slaClass = "text-amber-600";
+                          slaText = `${hrs}h`;
+                          slaChip = "chip-amber";
                         } else {
-                          slaText = `${hrs}h restantes`;
-                          slaClass = "text-emerald-600";
+                          slaText = `${hrs}h`;
+                          slaChip = "chip-emerald";
                         }
                       }
 
                       return (
-                        <tr
-                          key={t.id}
-                          className="border-t border-gray-100 hover:bg-gray-50 transition-colors"
-                        >
-                          <td
-                            className="px-3 py-2 font-medium text-primary hover:underline cursor-pointer"
-                            onClick={() => router.push(`/tickets/${t.id}`)}
-                          >
-                            {t.number}
+                        <tr key={t.id} className="transition-colors">
+                          <td className="font-semibold text-primary">
+                            <button
+                              type="button"
+                              className="hover:underline"
+                              onClick={() => router.push(`/tickets/${t.id}`)}
+                            >
+                              {t.number}
+                            </button>
                           </td>
-                          <td className="px-3 py-2 text-ink truncate max-w-xs">
-                            {t.title}
-                          </td>
-                          <td className="px-3 py-2 text-ink/80">{t.area}</td>
-                          <td className="px-3 py-2 text-ink/80">
-                            {t.priority}
-                          </td>
-                          <td className="px-3 py-2 text-ink/80">{t.type}</td>
-                          <td className="px-3 py-2 text-ink/80">
-                            {t.status.replace("_", " ")}
-                          </td>
-                          <td className="px-3 py-2 text-ink/70">
-                            {formatDate(t.createdAt)}
-                          </td>
-                          <td className={`px-3 py-2 text-[11px] ${slaClass}`}>
-                            {slaText}
+                          <td className="text-ink truncate max-w-xs">{t.title}</td>
+                          <td className="text-ink/80">{t.area}</td>
+                          <td className="text-ink/80">{t.priority}</td>
+                          <td className="text-ink/80">{t.type}</td>
+                          <td className="text-ink/80">{statusLabel(t.status)}</td>
+                          <td className="text-ink/70">{formatDate(t.createdAt)}</td>
+                          <td>
+                            <span className={slaChip}>{slaText}</span>
                           </td>
                         </tr>
                       );

@@ -6,22 +6,22 @@
   --foreground: #111827;
 }
 
-/* Utilidades personalizadas (sin usarlas en @apply) */
+/* Utilidades personalizadas */
 @layer utilities {
   .text-muted {
     @apply text-slate-500;
   }
-
   .text-ink {
     @apply text-slate-900;
   }
-
   .bg-primary {
     @apply bg-[#113082];
   }
-
   .text-primary {
     @apply text-[#113082];
+  }
+  .shadow-soft {
+    box-shadow: 0 8px 22px rgba(17, 48, 130, 0.18);
   }
 }
 
@@ -55,26 +55,141 @@
     @apply text-xs sm:text-sm text-slate-500;
   }
 
+  .section-title {
+    @apply text-sm sm:text-base font-semibold text-slate-900;
+  }
+
+  /* Botones (sin @apply de clases custom) */
+  .btn-sm {
+    @apply h-8 px-3 text-xs rounded-xl;
+  }
+  .btn-md {
+    @apply h-10 px-4 text-sm rounded-xl;
+  }
+  .btn-lg {
+    @apply h-11 px-5 text-sm rounded-2xl;
+  }
+
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-full
-      bg-[#113082] text-white px-4 py-1.5 text-xs font-medium
-      hover:bg-[#0c235f] transition;
+    @apply inline-flex items-center justify-center gap-2
+      h-10 px-4 text-sm rounded-xl
+      font-medium select-none whitespace-nowrap transition
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#11308233]
+      focus-visible:ring-offset-2 focus-visible:ring-offset-white
+      disabled:opacity-50 disabled:pointer-events-none
+      active:translate-y-px
+      bg-[#113082] text-white shadow-sm hover:bg-[#0c235f];
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2
+      h-10 px-4 text-sm rounded-xl
+      font-medium select-none whitespace-nowrap transition
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#11308233]
+      focus-visible:ring-offset-2 focus-visible:ring-offset-white
+      disabled:opacity-50 disabled:pointer-events-none
+      active:translate-y-px
+      bg-slate-900/5 text-slate-900 border border-slate-900/10
+      hover:bg-slate-900/10;
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2
+      h-10 px-4 text-sm rounded-xl
+      font-medium select-none whitespace-nowrap transition
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#11308233]
+      focus-visible:ring-offset-2 focus-visible:ring-offset-white
+      disabled:opacity-50 disabled:pointer-events-none
+      active:translate-y-px
+      bg-transparent text-slate-900 border border-slate-900/15
+      hover:bg-slate-900/5;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center rounded-full
-      px-3 py-1.5 border border-transparent text-slate-600
-      hover:bg-gray-100 hover:border-gray-200 transition;
+  @apply inline-flex items-center justify-center gap-2
+    h-10 px-4 text-sm rounded-xl
+    font-medium select-none whitespace-nowrap transition
+    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#11308233]
+    focus-visible:ring-offset-2 focus-visible:ring-offset-white
+    disabled:opacity-50 disabled:pointer-events-none
+    active:translate-y-px
+    bg-white text-slate-700
+    border border-slate-900/10
+    hover:bg-gray-50 hover:text-slate-900;
+}
+
+
+  .btn-danger-hover {
+    @apply hover:bg-red-50 hover:text-red-700 focus-visible:ring-red-200;
   }
 
+  /* Inputs / selects */
   .input {
     @apply w-full border border-gray-200 rounded-xl px-3 py-2
       bg-gray-50 text-sm text-slate-900
       placeholder:text-gray-400
       focus:bg-white focus:border-[#113082]
       focus:ring-2 focus:ring-[#1130821a]
-      outline-none
-      transition;
+      outline-none transition;
+  }
+
+  .select {
+    @apply h-8 rounded-xl border border-gray-200 bg-white px-3 text-xs text-slate-700
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#11308233]
+      focus-visible:ring-offset-2 focus-visible:ring-offset-white;
+  }
+
+  /* Badges / chips (sin @apply chip) */
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full
+      border border-gray-200 bg-white px-2.5 py-1
+      text-[11px] text-slate-600;
+  }
+
+  .chip-muted {
+    @apply inline-flex items-center rounded-full px-2.5 py-1
+      text-[11px] font-medium
+      bg-slate-900/5 text-slate-700;
+  }
+  .chip-blue {
+    @apply inline-flex items-center rounded-full px-2.5 py-1
+      text-[11px] font-medium
+      bg-blue-50 text-blue-700;
+  }
+  .chip-amber {
+    @apply inline-flex items-center rounded-full px-2.5 py-1
+      text-[11px] font-medium
+      bg-amber-50 text-amber-700;
+  }
+  .chip-red {
+    @apply inline-flex items-center rounded-full px-2.5 py-1
+      text-[11px] font-medium
+      bg-red-50 text-red-700;
+  }
+  .chip-emerald {
+    @apply inline-flex items-center rounded-full px-2.5 py-1
+      text-[11px] font-medium
+      bg-emerald-50 text-emerald-700;
+  }
+
+  /* Tabla */
+  .table {
+    @apply min-w-full text-sm;
+  }
+  .table thead {
+    @apply bg-gray-50 text-[11px] uppercase text-slate-500;
+  }
+  .table th {
+    @apply px-3 py-2 text-left font-semibold;
+  }
+  .table td {
+    @apply px-3 py-2 align-top;
+  }
+  .table tr {
+    @apply border-t border-gray-100;
+  }
+  .table tbody tr:hover {
+    @apply bg-gray-50;
   }
 
   .animate-fadeIn {
@@ -82,7 +197,7 @@
   }
 }
 
-/* Body global (sin usar bg-surface en @apply) */
+/* Body global */
 body {
   @apply bg-[#f4f5f7] text-slate-900;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",

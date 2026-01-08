@@ -28,6 +28,22 @@ function emailEnabled() {
   return true;
 }
 
+function escapeHtml(str: string) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+/**
+ * bodyLines:
+ * - Por defecto: texto (se escapa)
+ * - Si necesitas HTML controlado: { html: "..." }
+ */
+type BodyLine = string | { html: string };
+
 /**
  * Template base para todos los correos de tickets
  */
@@ -37,7 +53,7 @@ function buildTicketEmailTemplate(options: {
   preheader?: string;
   intro?: string;
   highlight?: string;
-  bodyLines?: string[]; // acepta texto o pequeños fragmentos HTML
+  bodyLines?: BodyLine[]; // acepta texto o pequeños fragmentos HTML controlados
   actionLabel?: string;
   actionUrl?: string;
   footerNote?: string;
@@ -54,27 +70,37 @@ function buildTicketEmailTemplate(options: {
     footerNote,
   } = options;
 
+  const safeSubject = escapeHtml(subject);
+  const safeTitle = escapeHtml(title);
+  const safeIntro = intro ? escapeHtml(intro) : "";
+  const safeHighlight = highlight ? escapeHtml(highlight) : "";
+
   const logoUrl = `${APP_URL}/upk-logo.png`;
 
   const bodyHtml =
     bodyLines.length > 0
       ? bodyLines
-          .map((line) =>
-            line === ""
-              ? `<div style="height:8px;"></div>`
-              : `<p style="margin:4px 0; font-size:13px; color:#1f2933; line-height:1.5;">${line}</p>`
-          )
+          .map((line) => {
+            if (line === "") return `<div style="height:8px;"></div>`;
+
+            if (typeof line === "object" && "html" in line) {
+              return `<p style="margin:4px 0; font-size:13px; color:#1f2933; line-height:1.5;">${line.html}</p>`;
+            }
+
+            const safeLine = escapeHtml(String(line));
+            return `<p style="margin:4px 0; font-size:13px; color:#1f2933; line-height:1.5;">${safeLine}</p>`;
+          })
           .join("\n")
       : "";
 
-  const preheaderText = preheader || "Notificación de ticket de soporte";
+  const preheaderText = escapeHtml(preheader || "Notificación de ticket de soporte");
 
   return `
 <!DOCTYPE html>
 <html lang="es">
   <head>
-    <meta charSet="UTF-8" />
-    <title>${subject}</title>
+    <meta charset="UTF-8" />
+    <title>${safeSubject}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
       /* fallback minimal para algunos clientes */
@@ -116,12 +142,12 @@ function buildTicketEmailTemplate(options: {
             <tr>
               <td style="padding:20px 24px 4px;">
                 <h1 style="margin:0 0 6px; font-size:20px; line-height:1.3; color:#e5edff; font-weight:600;">
-                  ${title}
+                  ${safeTitle}
                 </h1>
                 ${
                   intro
                     ? `<p style="margin:0; font-size:13px; color:#cbd5f5; line-height:1.5;">
-                    ${intro}
+                    ${safeIntro}
                   </p>`
                     : ""
                 }
@@ -135,7 +161,7 @@ function buildTicketEmailTemplate(options: {
             <tr>
               <td style="padding:8px 24px 4px;">
                 <div style="display:inline-block; padding:6px 12px; border-radius:999px; border:1px solid rgba(129,140,248,0.6); background:linear-gradient(120deg,rgba(37,99,235,0.2),rgba(79,70,229,0.15)); font-size:11px; color:#bfdbfe; text-transform:uppercase; letter-spacing:0.08em;">
-                  ${highlight}
+                  ${safeHighlight}
                 </div>
               </td>
             </tr>
@@ -158,7 +184,7 @@ function buildTicketEmailTemplate(options: {
                 ? `
             <tr>
               <td style="padding:12px 24px 4px;">
-                <a href="${actionUrl}"
+                <a href="${escapeHtml(actionUrl)}"
                   style="
                     display:inline-block;
                     padding:10px 18px;
@@ -170,7 +196,7 @@ function buildTicketEmailTemplate(options: {
                     text-decoration:none;
                     box-shadow:0 15px 30px rgba(37,99,235,0.4);
                   ">
-                  ${actionLabel}
+                  ${escapeHtml(actionLabel)}
                 </a>
               </td>
             </tr>
@@ -186,7 +212,9 @@ function buildTicketEmailTemplate(options: {
                 </p>
                 ${
                   footerNote
-                    ? `<p style="margin:0 0 4px; font-size:11px; color:#64748b;">${footerNote}</p>`
+                    ? `<p style="margin:0 0 4px; font-size:11px; color:#64748b;">${escapeHtml(
+                        footerNote
+                      )}</p>`
                     : ""
                 }
                 <p style="margin:0; font-size:11px; color:#475569;">
@@ -238,7 +266,7 @@ export async function sendTicketCreatedEmail({
     intro: `Hola ${requesterName}, hemos registrado tu solicitud en la mesa de ayuda.`,
     highlight: `Ticket ${ticketNumber}`,
     bodyLines: [
-      `Asunto: <strong>${title}</strong>`,
+      { html: `Asunto: <strong>${escapeHtml(title)}</strong>` },
       "",
       `Nuestro equipo revisará tu caso y se pondrá en contacto contigo si necesita más información.`,
     ],
@@ -285,9 +313,9 @@ export async function sendTicketUpdatedEmail({
     intro: `Se ha registrado una nueva gestión o comentario en tu ticket.`,
     highlight: `Ticket ${ticketNumber}`,
     bodyLines: [
-      `Asunto: <strong>${title}</strong>`,
+      { html: `Asunto: <strong>${escapeHtml(title)}</strong>` },
       "",
-      `<strong>Detalle de la actualización:</strong>`,
+      { html: `<strong>Detalle de la actualización:</strong>` },
       message,
     ],
     actionLabel: "Ver actualización",
@@ -335,8 +363,8 @@ export async function sendTicketAssignedEmail({
     intro: `Hola ${assigneeName}, se te ha asignado un nuevo ticket para gestión.`,
     highlight: `Ticket asignado · ${ticketNumber}`,
     bodyLines: [
-      `Asunto: <strong>${title}</strong>`,
-      requesterName ? `Solicitante: <strong>${requesterName}</strong>` : "",
+      { html: `Asunto: <strong>${escapeHtml(title)}</strong>` },
+      requesterName ? { html: `Solicitante: <strong>${escapeHtml(requesterName)}</strong>` } : "",
       "",
       `Por favor, revisa el detalle del caso y avanza con el diagnóstico o solución.`,
     ],
@@ -385,10 +413,14 @@ export async function sendTicketResolvedEmail({
     intro: `Hola ${requesterName}, tu ticket ha sido atendido y se ha marcado como resuelto.`,
     highlight: `Ticket resuelto · ${ticketNumber}`,
     bodyLines: [
-      `Asunto: <strong>${title}</strong>`,
+      { html: `Asunto: <strong>${escapeHtml(title)}</strong>` },
       "",
       resolutionSummary
-        ? `<strong>Resumen de la solución:</strong><br/>${resolutionSummary}`
+        ? {
+            html: `<strong>Resumen de la solución:</strong><br/>${escapeHtml(
+              resolutionSummary
+            ).replace(/\n/g, "<br/>")}`,
+          }
         : `Si la solución aplicada no resuelve por completo tu incidencia, puedes responder al ticket para que lo revisemos nuevamente.`,
     ],
     actionLabel: "Ver detalle del ticket",
@@ -432,11 +464,11 @@ export async function sendTicketReopenedEmail({
     title: `El ticket ${ticketNumber} ha sido reabierto`,
     preheader: `Un ticket cerrado ha sido reabierto para nueva revisión`,
     intro: whoReopened
-      ? `El usuario <strong>${whoReopened}</strong> ha reabierto el ticket.`
+      ? `El usuario ${whoReopened} ha reabierto el ticket.`
       : `El ticket ha sido reabierto para continuar con la gestión.`,
     highlight: `Ticket reabierto · ${ticketNumber}`,
     bodyLines: [
-      `Asunto: <strong>${title}</strong>`,
+      { html: `Asunto: <strong>${escapeHtml(title)}</strong>` },
       "",
       `Revisa el historial y los nuevos comentarios para continuar con el caso.`,
     ],
@@ -496,12 +528,10 @@ export async function sendSlaAlertEmail({
         })
       : undefined;
 
-  const bodyLines: string[] = [
-    `Asunto: <strong>${title}</strong>`,
-  ];
+  const bodyLines: BodyLine[] = [{ html: `Asunto: <strong>${escapeHtml(title)}</strong>` }];
 
   if (dueText) {
-    bodyLines.push(`Compromiso (SLA): <strong>${dueText}</strong>`);
+    bodyLines.push({ html: `Compromiso (SLA): <strong>${escapeHtml(dueText)}</strong>` });
   }
 
   bodyLines.push(

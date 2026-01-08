@@ -62,14 +62,14 @@ function buildTicketEmailTemplate(options: {
           .map((line) =>
             line === ""
               ? `<div style="height:8px;"></div>`
-              : `<p style="margin:4px 0; font-size:13px; color:#1f2933; line-height:1.5;">${line}</p>`
+              : `<p style="margin:4px 0; font-size:13px; color:#ffffff; line-height:1.5;">${line}</p>`
           )
           .join("\n")
       : "";
 
   const preheaderText = preheader || "Notificación de ticket de soporte";
 
-return `
+  return `
 <!DOCTYPE html>
 <html lang="es">
   <head>
@@ -146,7 +146,7 @@ return `
             <!-- Cuerpo -->
             <tr>
               <td style="padding:8px 24px 4px;">
-                <div style="background:radial-gradient(circle at top left,rgba(37,99,235,0.12),rgba(15,23,42,0.8)); border-radius:18px; padding:14px 16px; border:1px solid rgba(255,255,255,0.55);">
+                <div style="background:radial-gradient(circle at top left,rgba(37,99,235,0.12),rgba(15,23,42,0.8)); border-radius:18px; padding:14px 16px; border:1px solid rgba(255,255,255,0.55); color:#ffffff;">
                   ${bodyHtml}
                 </div>
               </td>
@@ -205,7 +205,6 @@ return `
   </body>
 </html>
   `;
-
 }
 
 /* ------------------------------------------------------------------ */
@@ -497,9 +496,7 @@ export async function sendSlaAlertEmail({
         })
       : undefined;
 
-  const bodyLines: string[] = [
-    `Asunto: <strong>${title}</strong>`,
-  ];
+  const bodyLines: string[] = [`Asunto: <strong>${title}</strong>`];
 
   if (dueText) {
     bodyLines.push(`Compromiso (SLA): <strong>${dueText}</strong>`);
